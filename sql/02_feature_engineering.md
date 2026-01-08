@@ -1,9 +1,11 @@
--- =============================================================
--- 02_feature_engineering.sql
--- NYC HPD 311 Complaints — Feature Engineering
--- Purpose: Add engineered columns for EDA + Tableau
--- =============================================================
+# 02_feature_engineering.sql  
+### NYC HPD 311 Complaints — Feature Engineering  
+**Purpose:** Add engineered columns for EDA + Tableau.
 
+---
+
+
+```sql
 ---------------------------------------------------------------
 -- YEAR / MONTH / DAY
 ---------------------------------------------------------------
@@ -50,4 +52,5 @@ SET day_of_week =
         WHEN '5' THEN 'Friday'
         WHEN '6' THEN 'Saturday'
     END;
+
 
