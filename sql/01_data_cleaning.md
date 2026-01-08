@@ -1,13 +1,13 @@
--- =============================================================
--- 01_data_cleaning.sql
--- NYC HPD 311 Complaints — Data Cleaning & Preparation
--- Author: Sayeh Nelson
--- Purpose: Convert raw HPD dataset into clean, structured format
--- =============================================================
+# 01_data_cleaning.sql  
+### NYC HPD 311 Complaints — Data Cleaning & Preparation  
+**Author:** Sayeh Nelson  
+**Purpose:** Convert raw HPD dataset into clean, structured format suitable for EDA & Tableau.
 
----------------------------------------------------------------
--- FIXING CREATED DATE (Convert to ISO format)
----------------------------------------------------------------
+---
+
+```sql
+ALTER TABLE service_request
+ADD COLUMN created_dt TEXT;
 
 ALTER TABLE service_request
 ADD COLUMN created_dt TEXT;
@@ -35,7 +35,7 @@ FROM service_request;
 
 
 ---------------------------------------------------------------
--- FIXING CLOSED DATE (Convert to ISO format)
+  FIXING CLOSED DATE (Convert to ISO format)
 ---------------------------------------------------------------
 
 ALTER TABLE service_request
@@ -87,4 +87,5 @@ LIMIT 20;
 UPDATE service_request
 SET response_hours = NULL
 WHERE response_hours < 0;
+
 
