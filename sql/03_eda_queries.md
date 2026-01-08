@@ -1,10 +1,10 @@
--- =============================================================
--- 03_eda_queries.sql
--- NYC HPD 311 Complaints
--- Purpose: Explore data with SQL queries for EDA
--- =============================================================
+# 03_eda_queries.sql  
+### NYC HPD 311 Complaints — Exploratory Data Analysis (EDA)  
+**Purpose:** Explore patterns, volume, and response behavior using SQL.
 
--- ---------------------------------------------------------------
+---
+
+```sql
 
 -- EDA Time! --
 
@@ -507,4 +507,5 @@ SELECT
     COUNT(response_hours) AS cases_with_response_hours
 FROM service_request
 GROUP BY season
+
 ORDER BY total_cases DESC;
