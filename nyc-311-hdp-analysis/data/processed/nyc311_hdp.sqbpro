@@ -1,0 +1,783 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="nyc311_hdp.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="6856"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="clean_hpd_requests" custom_title="0" dock_id="1" table="4,18:mainclean_hpd_requests"/><dock_state state="000000ff00000000fd0000000100000002000002ad000003a3fc0100000001fb000000160064006f0063006b00420072006f00770073006500310100000000000002ad0000013900ffffff000002ad0000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="clean_hpd_requests" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="71"/><column index="2" value="179"/><column index="3" value="179"/><column index="4" value="49"/><column index="5" value="300"/><column index="6" value="117"/><column index="7" value="132"/><column index="8" value="109"/><column index="9" value="156"/><column index="10" value="75"/><column index="11" value="296"/><column index="12" value="257"/><column index="13" value="54"/><column index="14" value="163"/><column index="15" value="117"/><column index="16" value="124"/><column index="17" value="39"/><column index="18" value="44"/><column index="19" value="29"/><column index="20" value="83"/><column index="21" value="54"/><column index="22" value="156"/><column index="23" value="156"/><column index="24" value="140"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="service_request" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="71"/><column index="2" value="179"/><column index="3" value="179"/><column index="4" value="49"/><column index="5" value="300"/><column index="6" value="117"/><column index="7" value="132"/><column index="8" value="163"/><column index="9" value="75"/><column index="10" value="296"/><column index="11" value="257"/><column index="12" value="86"/><column index="13" value="86"/><column index="14" value="124"/><column index="15" value="124"/><column index="16" value="82"/><column index="17" value="156"/><column index="18" value="64"/><column index="19" value="78"/><column index="20" value="54"/><column index="21" value="60"/><column index="22" value="300"/><column index="23" value="185"/><column index="24" value="132"/><column index="25" value="85"/><column index="26" value="109"/><column index="27" value="156"/><column index="28" value="156"/><column index="29" value="145"/><column index="30" value="112"/><column index="31" value="109"/><column index="32" value="78"/><column index="33" value="136"/><column index="34" value="127"/><column index="35" value="131"/><column index="36" value="150"/><column index="37" value="72"/><column index="38" value="148"/><column index="39" value="117"/><column index="40" value="124"/><column index="41" value="300"/><column index="42" value="39"/><column index="43" value="44"/><column index="44" value="29"/><column index="45" value="83"/><column index="46" value="54"/><column index="47" value="140"/><column index="48" value="156"/><column index="49" value="156"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="ALT/FIX">-- Table Atlteration / Troubleshoot Section--
+
+-- Table Should have a max date of 2025 (sql was showing up to 2024)
+-- This happend because the the date didnt convert poperly to ISO format
+
+ALTER TABLE service_request
+ADD COLUMN created_dt TEXT;
+
+UPDATE service_request
+SET created_dt =
+    substr(&quot;Created Date&quot;, 7, 4) || '-' ||
+    substr(&quot;Created Date&quot;, 1, 2) || '-' ||
+    substr(&quot;Created Date&quot;, 4, 2) || 'T' ||
+    CASE
+        WHEN substr(&quot;Created Date&quot;, -2) = 'PM' 
+             AND substr(&quot;Created Date&quot;, 12, 2) != '12'
+            THEN printf('%02d', substr(&quot;Created Date&quot;, 12, 2) + 12)
+        WHEN substr(&quot;Created Date&quot;, -2) = 'AM'
+             AND substr(&quot;Created Date&quot;, 12, 2) = '12'
+            THEN '00'
+        ELSE substr(&quot;Created Date&quot;, 12, 2)
+    END
+    || ':' || substr(&quot;Created Date&quot;, 15, 2)
+    || ':' || substr(&quot;Created Date&quot;, 18, 2);
+END;
+
+SELECT 
+    MIN(created_dt) AS earliest,
+    MAX(created_dt) AS latest
+FROM service_request;
+-- Coversion done. Showing dates up to 2025.
+
+-- Convert &quot;Closed Date&quot; into ISO format
+ALTER TABLE service_request
+ADD COLUMN closed_dt TEXT; 
+
+UPDATE service_request
+SET closed_dt =
+	substr(&quot;Closed Date&quot;, 7, 4) || '-' ||  --year
+	substr(&quot;Closed Date&quot;, 1, 2) || '-' ||  -- month
+	substr(&quot;Closed Date&quot;, 4, 2) || 'T' ||  -- day
+	CASE
+		WHEN substr(&quot;Closed Date&quot;, -2) = 'PM'
+			AND substr(&quot;Closed Date&quot;, 12, 2) != '12'
+			THEN printf('%02d', substr(&quot;Closed Date&quot;, 12, 2) + 12)
+		WHEN substr(&quot;Closed Date&quot;, -2) = 'AM'
+			AND substr(&quot;Closed Date&quot;, 12, 2) = '12'
+			THEN '00'
+		ELSE substr(&quot;Closed Date&quot;, 12, 2)
+	END
+	|| ':' || substr(&quot;Closed Date&quot;, 15, 2)
+	|| ':' || substr(&quot;Closed Date&quot;, 18, 2);
+END;
+
+SELECT
+	MIN(closed_dt) as earliest,
+	MAX(closed_dt) as latest
+FROM service_request
+-- conversion done. Now showing dates is ISO format
+
+-- Creating response time column 
+ALTER TABLE service_request
+ADD COLUMN response_hours REAL;
+
+UPDATE service_request
+SET response_hours =
+    (julianday(closed_dt) - julianday(created_dt)) * 24;
+-- julianday converts timestamps into day numbers.
+
+SELECT
+    &quot;Created Date&quot;,   --validating response time
+    &quot;Closed Date&quot;,
+    created_dt,
+    closed_dt,
+    response_hours
+FROM service_request
+LIMIT 20;
+-- looks good! :D
+
+-- Find True internal column name
+SELECT 
+    name,
+    quote(name),
+    length(name)
+FROM pragma_table_info('service_request');
+
+
+
+</sql><sql name="EDA">-- Adding in engineered columns
+
+-- ALTER TABLE service_request ADD COLUMN year INTEGER;
+-- ALTER TABLE service_request ADD COLUMN month INTEGER;
+-- ALTER TABLE service_request ADD COLUMN day INTEGER;
+-- ALTER TABLE service_request ADD COLUMN day_of_week TEXT;
+-- ALTER TABLE service_request ADD COLUMN season TEXT; 
+
+SELECT &quot;Created Date&quot;, &quot;Closed Date&quot;
+FROM service_request
+LIMIT 5;
+
+-- Update columns with year, month, day, ect. --
+
+-- Update year
+UPDATE service_request
+SET year = CAST(substr(&quot;Created Date&quot;, 7, 4) AS INTEGER);
+
+-- Update month
+UPDATE service_request
+SET month = CAST(substr(&quot;Created Date&quot;, 1, 2) AS INTEGER);
+
+-- Update day
+UPDATE service_request
+SET day = CAST(substr(&quot;Created Date&quot;, 4, 2) AS INTEGER);
+
+-- Update season
+UPDATE service_request
+SET season =
+	CASE
+		WHEN month IN (12, 1, 2) THEN 'Winter'
+		WHEN month IN (3, 4, 5) THEN 'Spring'
+		WHEN month IN (6, 7, 8) THEN 'Summer'
+		WHEN month IN (9, 10, 11) THEN 'Fall' 
+	END;
+END;
+
+UPDATE service_request
+SET day_of_week = strftime('%w',
+	substr(&quot;Created Date&quot;, 7, 4) || '-' ||
+	substr(&quot;Created Date&quot;, 1, 2) || '-' ||
+	substr(&quot;Created Date&quot;, 4, 2)
+); 
+
+-- Converting numbers to days of the week.
+UPDATE service_request
+SET day_of_week =
+	CASE day_of_week
+		WHEN '0' THEN 'Sunday'
+		WHEN '1' THEN 'Monday'
+		WHEN '2' THEN 'Tuesday'
+		WHEN '3' THEN 'Wednesday' 
+		WHEN '4' THEN 'Thursday' 
+		WHEN '5' THEN 'Friday'
+		WHEN '6' THEN 'Saturday'
+	END;
+END;
+
+-- Checking engineered columns --
+SELECT 
+	&quot;Created Date&quot;,
+	year,
+	month,
+	day,
+	season,
+	day_of_week
+FROM service_request
+LIMIT 10;
+
+-- EDA Time! --
+
+-- Total Rows 
+SELECT COUNT(*) AS total_rows
+FROM service_request;
+
+-- Date Range 
+SELECT 
+    MIN(created_dt) AS earliest,
+    MAX(created_dt) AS latest
+FROM service_request;
+
+
+-- Complaint count by year 
+SELECT year,COUNT(*) AS total_requests
+FROM service_request
+GROUP BY year
+ORDER BY year;
+
+-- Complaint count by month
+SELECT 
+	year,
+	month,
+	COUNT(*) AS monthly_request
+FROM service_request
+GROUP BY year, month
+ORDER by year, month;
+
+-- Complaint Type 
+SELECT
+	&quot;Complaint Type&quot;,
+	COUNT(*) AS total
+FROM service_request
+GROUP BY &quot;Complaint Type&quot;
+ORDER BY total DESC
+LIMIT 20; 
+
+-- Combining duplicate categories into 1 standardized type.
+SELECT
+	UPPER(&quot;Complaint Type&quot;) as standardized_type,
+	COUNT(*) AS total
+FROM service_request
+GROUP BY standardized_type
+ORDER BY total DESC;
+
+-- Complaint Type by Month 
+SELECT
+    UPPER(&quot;Complaint Type&quot;) AS standardized_type,
+	year,
+    CASE month
+        WHEN 1 THEN 'January'
+        WHEN 2 THEN 'February'
+        WHEN 3 THEN 'March'
+        WHEN 4 THEN 'April'
+        WHEN 5 THEN 'May'
+        WHEN 6 THEN 'June'
+        WHEN 7 THEN 'July'
+        WHEN 8 THEN 'August'
+        WHEN 9 THEN 'September'
+        WHEN 10 THEN 'October'
+        WHEN 11 THEN 'November'
+        WHEN 12 THEN 'December'
+    END AS month_name,
+    COUNT(*) AS total
+FROM service_request
+GROUP BY standardized_type, month, year
+ORDER BY standardized_type, month, year;
+
+-- Complaint Type by Borough
+SELECT 
+    Borough,
+    UPPER(&quot;Complaint Type&quot;) AS type,
+    COUNT(*) AS total
+FROM service_request
+GROUP BY Borough, type
+ORDER BY Borough, total DESC;
+
+-- Complaint Type by Borough and Season
+SELECT
+	Borough,
+	UPPER(&quot;Complaint Type&quot;) AS type,
+	CASE month
+        WHEN 1 THEN 'January'
+        WHEN 2 THEN 'February'
+        WHEN 3 THEN 'March'
+        WHEN 4 THEN 'April'
+        WHEN 5 THEN 'May'
+        WHEN 6 THEN 'June'
+        WHEN 7 THEN 'July'
+        WHEN 8 THEN 'August'
+        WHEN 9 THEN 'September'
+        WHEN 10 THEN 'October'
+        WHEN 11 THEN 'November'
+        WHEN 12 THEN 'December'
+    END AS month_name,
+	COUNT(*) AS total
+FROM service_request
+GROUP BY Borough, type, month
+ORDER BY Borough, type, month;
+
+SELECT
+	Borough,
+	season,
+	UPPER(&quot;Complaint Type&quot;) AS type,
+	COUNT(*) AS total
+FROM service_request
+GROUP BY Borough, season, type
+ORDER BY Borough, season, type;
+
+-- Looking into Response Time --
+SELECT
+    AVG(response_hours) AS avg_hours,
+    MIN(response_hours) AS fastest_case,
+    MAX(response_hours) AS slowest_case,
+    (
+        SELECT response_hours
+        FROM service_request
+        WHERE response_hours IS NOT NULL
+        ORDER BY response_hours
+        LIMIT 1 OFFSET (
+            (SELECT COUNT(*) FROM service_request WHERE response_hours IS NOT NULL) / 2
+        )
+    ) AS median_hours
+FROM service_request;
+
+-- Converting negative response times to NULL
+UPDATE service_request
+SET response_hours = NULL
+WHERE response_hours &lt; 0;
+
+-- Rerunning mectric
+SELECT
+    AVG(response_hours) AS avg_hours,
+    MIN(response_hours) AS fastest_case,
+    MAX(response_hours) AS slowest_case,
+    (
+        SELECT response_hours
+        FROM service_request
+        WHERE response_hours IS NOT NULL
+        ORDER BY response_hours
+        LIMIT 1 OFFSET (
+            (SELECT COUNT(*) FROM service_request WHERE response_hours IS NOT NULL) / 2
+        )
+    ) AS median_hours
+FROM service_request;
+
+-- Results from the previous query shows result (0.0 fastest closed case). Taking a deeper look.
+SELECT
+	&quot;Created Date&quot;,
+	&quot;Closed Date&quot;,
+	created_dt,
+	closed_dt,
+	response_hours
+FROM service_request
+WHERE response_hours = 0
+LIMIT 20; 
+
+-- Response Time by Borough (without median)
+SELECT
+    &quot;Borough&quot;,
+    AVG(response_hours) AS avg_response_hours,
+    MIN(response_hours) AS fastest_case,
+    MAX(response_hours) AS slowest_case,
+    COUNT(*) AS total_cases
+FROM service_request
+WHERE response_hours IS NOT NULL
+GROUP BY &quot;Borough&quot;
+ORDER BY avg_response_hours DESC;
+
+-- Median Response Time by Borough
+WITH ordered AS (
+    SELECT
+        &quot;Borough&quot;,
+        response_hours,
+        ROW_NUMBER() OVER (
+            PARTITION BY &quot;Borough&quot;
+            ORDER BY response_hours
+        ) AS rn,
+        COUNT(*) OVER (
+            PARTITION BY &quot;Borough&quot;
+        ) AS cnt
+    FROM service_request
+    WHERE response_hours IS NOT NULL
+)
+SELECT
+    &quot;Borough&quot;,
+    response_hours AS median_response_hours
+FROM ordered
+WHERE rn = (cnt + 1) / 2
+ORDER BY median_response_hours DESC;
+
+-- Response Time by Complaint Type (Count)
+SELECT
+    UPPER(&quot;Complaint Type&quot;) AS type,
+    COUNT(*) AS total_cases,
+    COUNT(response_hours) AS cases_with_response_hours
+FROM service_request
+GROUP BY type
+ORDER BY cases_with_response_hours DESC;
+
+-- Response time by complaint type (avg, min, max response)
+SELECT
+	UPPER(&quot;Complaint Type&quot;) as type,
+	AVG(response_hours) as avg_response_hours,
+	MIN(response_hours) as fastest_case,
+	MAX(response_hours) as slowest_case,
+	COUNT(*) AS total_cases
+FROM service_request
+WHERE response_hours IS NOT NULL
+GROUP BY type
+ORDER BY avg_response_hours DESC; 
+
+-- Median response time by complaint type --
+
+-- Median HEAT/HOT WATER
+SELECT response_hours
+FROM service_request
+WHERE UPPER(&quot;Complaint Type&quot;) = 'HEAT/HOT WATER'
+	AND response_hours IS NOT NULL
+ORDER BY response_hours
+LIMIT 1 OFFSET(
+	(SELECT COUNT(*)
+	FROM service_request
+	WHERE UPPER(&quot;Complaint Type&quot;) = 'HEAT/HOT WATER'
+		AND response_hours IS NOT NULL) / 2
+);
+
+-- Median PLUMBING
+SELECT response_hours
+FROM service_request
+WHERE UPPER(&quot;Complaint Type&quot;) = 'PLUMBING'
+  AND response_hours IS NOT NULL
+ORDER BY response_hours
+LIMIT 1 OFFSET (
+    (SELECT COUNT(*)
+     FROM service_request
+     WHERE UPPER(&quot;Complaint Type&quot;) = 'PLUMBING'
+       AND response_hours IS NOT NULL) / 2
+);
+
+-- Median ELECTRIC
+SELECT response_hours
+FROM service_request
+WHERE UPPER(&quot;Complaint Type&quot;) = 'ELECTRIC'
+  AND response_hours IS NOT NULL
+ORDER BY response_hours
+LIMIT 1 OFFSET (
+    (SELECT COUNT(*)
+     FROM service_request
+     WHERE UPPER(&quot;Complaint Type&quot;) = 'ELECTRIC'
+       AND response_hours IS NOT NULL) / 2
+);
+
+-- Response time by season --
+
+-- Response Time by Season (avg, min, max, count)
+SELECT
+    season,
+    AVG(response_hours) AS avg_response_hours,
+    MIN(response_hours) AS fastest_case,
+    MAX(response_hours) AS slowest_case,
+    COUNT(*) AS total_cases
+FROM service_request
+WHERE response_hours IS NOT NULL
+GROUP BY season
+ORDER BY avg_response_hours DESC;
+
+-- Median Response Time by Season
+
+-- Median Fall
+SELECT response_hours
+FROM service_request
+WHERE season = 'Fall'
+  AND response_hours IS NOT NULL
+ORDER BY response_hours
+LIMIT 1 OFFSET (
+    (SELECT COUNT(*)
+     FROM service_request
+     WHERE season = 'Fall'
+       AND response_hours IS NOT NULL) / 2
+);
+
+-- Median Winter
+SELECT response_hours
+FROM service_request
+WHERE season = 'Winter'
+  AND response_hours IS NOT NULL
+ORDER BY response_hours
+LIMIT 1 OFFSET (
+    (SELECT COUNT(*)
+     FROM service_request
+     WHERE season = 'Winter'
+       AND response_hours IS NOT NULL) / 2
+);
+
+-- Median Spring
+SELECT response_hours
+FROM service_request
+WHERE season = 'Spring'
+  AND response_hours IS NOT NULL
+ORDER BY response_hours
+LIMIT 1 OFFSET (
+    (SELECT COUNT(*)
+     FROM service_request
+     WHERE season = 'Spring'
+       AND response_hours IS NOT NULL) / 2
+);
+
+-- Median Summer
+SELECT response_hours
+FROM service_request
+WHERE season = 'Summer'
+  AND response_hours IS NOT NULL
+ORDER BY response_hours
+LIMIT 1 OFFSET (
+    (SELECT COUNT(*)
+     FROM service_request
+     WHERE season = 'Summer'
+       AND response_hours IS NOT NULL) / 2
+);
+
+-- Response Time by Month (avg, min, max, count)
+SELECT
+    month,
+    AVG(response_hours) AS avg_response_hours,
+    MIN(response_hours) AS fastest_case,
+    MAX(response_hours) AS slowest_case,
+    COUNT(*) AS total_cases
+FROM service_request
+WHERE response_hours IS NOT NULL
+GROUP BY month
+ORDER BY avg_response_hours DESC;
+
+-- Median by Month 
+WITH ordered AS (
+    SELECT
+        month,
+        response_hours,
+        ROW_NUMBER() OVER (PARTITION BY month ORDER BY response_hours) AS rn,
+        COUNT(*) OVER (PARTITION BY month) AS cnt
+    FROM service_request
+    WHERE response_hours IS NOT NULL
+)
+SELECT
+    month,
+    response_hours AS median_response_hours
+FROM ordered
+WHERE rn = (cnt + 1) / 2
+ORDER BY median_response_hours DESC;
+
+-- Response Time By year --
+
+-- Response Time by Year (avg, min, max, count)
+SELECT
+    year,
+    AVG(response_hours) AS avg_response_hours,
+    MIN(response_hours) AS fastest_case,
+    MAX(response_hours) AS slowest_case,
+    COUNT(*) AS total_cases
+FROM service_request
+WHERE response_hours IS NOT NULL
+GROUP BY year
+ORDER BY avg_response_hours DESC;
+
+-- Median Response Time by year
+WITH ordered AS (
+    SELECT
+        year,
+        response_hours,
+        ROW_NUMBER() OVER (PARTITION BY year ORDER BY response_hours) AS rn,
+        COUNT(*) OVER (PARTITION BY year) AS cnt
+    FROM service_request
+    WHERE response_hours IS NOT NULL
+)
+SELECT
+    year,
+    response_hours AS median_response_hours
+FROM ordered
+WHERE rn = (cnt + 1) / 2
+ORDER BY median_response_hours DESC;
+
+-- Response Time by Hour of Day (avg, min, max, count)
+SELECT	
+	CAST(strftime('%H', created_dt) AS INTGER) AS hour_of_day,
+	AVG(response_hours) AS avg_response_hours,
+	MIN(response_hours) AS fastest_case,
+	MAX(response_hours) AS slowest_case,
+	COUNT(*) AS total_cases
+FROM service_request
+WHERE response_hours IS NOT NULL
+GROUP BY hour_of_day
+ORDER BY avg_response_hours DESC;
+
+-- Median Response Time by Hour of Day
+WITH ordered AS (
+    SELECT
+        CAST(strftime('%H', created_dt) AS INTEGER) AS hour_of_day,
+        response_hours,
+        ROW_NUMBER() OVER (PARTITION BY CAST(strftime('%H', created_dt) AS INTEGER)
+                           ORDER BY response_hours) AS rn,
+        COUNT(*) OVER (PARTITION BY CAST(strftime('%H', created_dt) AS INTEGER)) AS cnt
+    FROM service_request
+    WHERE response_hours IS NOT NULL
+)
+SELECT
+    hour_of_day,
+    response_hours AS median_response_hours
+FROM ordered
+WHERE rn = (cnt + 1) / 2
+ORDER BY median_response_hours DESC;
+
+-- Response Time By of Week (avg, min, max, count)
+SELECT	
+	CASE strftime('%w', created_dt)
+		WHEN '0' THEN 'Sunday'
+		WHEN '1' THEN 'Monday'
+		WHEN '2' THEN 'Tuesday'
+		WHEN '3' THEN 'Wednesday'
+		WHEN '4' THEN 'Thursday'
+		WHEN '5' THEN 'Friday'
+		WHEN '6' THEN 'Saturday'
+	END AS weekday,
+	AVG(response_hours) AS avg_response_hours,
+	MIN(response_hours) AS fastest_case,
+	MAX(response_hours) AS slowest_case,
+	COUNT(*) AS total_cases
+FROM service_request
+WHERE response_hours IS NOT NULL
+GROUP BY weekday
+ORDER BY avg_response_hours DESC; 
+
+-- Median Response Time by Day of Week
+WITH ordered AS (
+    SELECT
+        CASE strftime('%w', created_dt)
+            WHEN '0' THEN 'Sunday'
+            WHEN '1' THEN 'Monday'
+            WHEN '2' THEN 'Tuesday'
+            WHEN '3' THEN 'Wednesday'
+            WHEN '4' THEN 'Thursday'
+            WHEN '5' THEN 'Friday'
+            WHEN '6' THEN 'Saturday'
+        END AS weekday,
+        response_hours,
+        ROW_NUMBER() OVER (
+            PARTITION BY strftime('%w', created_dt)
+            ORDER BY response_hours
+        ) AS rn,
+        COUNT(*) OVER (
+            PARTITION BY strftime('%w', created_dt)
+        ) AS cnt
+    FROM service_request
+    WHERE response_hours IS NOT NULL
+)
+SELECT
+    weekday,
+    response_hours AS median_response_hours
+FROM ordered
+WHERE rn = (cnt + 1) / 2
+ORDER BY median_response_hours DESC;
+
+-- Case Volume by Borough
+SELECT
+	&quot;Borough&quot; AS borough,
+	COUNT(*) AS total_cases,
+	COUNT(response_hours) AS case_with_repsonse_hours
+FROM service_request
+GROUP BY borough 
+ORDER BY total_cases DESC;
+
+-- Case Volume by Complaint Type
+SELECT 
+    UPPER(&quot;Complaint Type&quot;) AS type,
+    COUNT(*) AS total_cases,
+    COUNT(response_hours) AS cases_with_response_hours
+FROM service_request
+GROUP BY type
+ORDER BY total_cases DESC;
+
+-- Case Volume by Facility Type
+SELECT
+    UPPER(&quot;Facility Type&quot;) AS facility_type,
+    COUNT(*) AS total_cases,
+    COUNT(response_hours) AS cases_with_response_hours
+FROM service_request
+GROUP BY facility_type
+ORDER BY total_cases DESC;
+
+-- How many rows have non-null Facility type
+SELECT 
+    COUNT(*) AS total_rows,
+    SUM(CASE WHEN &quot;Facility Type&quot; IS NOT NULL THEN 1 ELSE 0 END) AS non_null_facility_rows
+FROM service_request;
+
+-- Case Volume by Season
+SELECT 
+    season,
+    COUNT(*) AS total_cases,
+    COUNT(response_hours) AS cases_with_response_hours
+FROM service_request
+GROUP BY season
+ORDER BY total_cases DESC;
+
+
+
+
+	
+
+</sql><sql name="TABLEAU_TABLE">-- ================================================
+--  NYC 311 HPD COMPLAINTS – FINAL CLEAN DATASET
+--  Author: Sayeh Nelson
+--  Purpose: Create a Tableau-ready export table
+-- ================================================
+
+CREATE TABLE clean_hpd_requests AS
+SELECT
+    -- Unique Identifiers
+    &quot;Unique Key&quot; AS unique_key,
+
+    -- Dates (raw)
+    &quot;Created Date&quot; AS created_date_raw,
+    &quot;Closed Date&quot; AS closed_date_raw,
+
+    -- Converted DATETIME fields
+    DATETIME(&quot;Created Date&quot;) AS created_dt,
+    DATETIME(&quot;Closed Date&quot;) AS closed_dt,
+
+    -------------------------------------------------
+    -- DATE ENGINEERING
+    -------------------------------------------------
+    STRFTIME('%Y', DATETIME(&quot;Created Date&quot;)) AS year,
+    CAST(STRFTIME('%m', DATETIME(&quot;Created Date&quot;)) AS INTEGER) AS month,
+    CAST(STRFTIME('%d', DATETIME(&quot;Created Date&quot;)) AS INTEGER) AS day,
+
+    CASE STRFTIME('%w', DATETIME(&quot;Created Date&quot;))
+        WHEN '0' THEN 'Sunday'
+        WHEN '1' THEN 'Monday'
+        WHEN '2' THEN 'Tuesday'
+        WHEN '3' THEN 'Wednesday'
+        WHEN '4' THEN 'Thursday'
+        WHEN '5' THEN 'Friday'
+        WHEN '6' THEN 'Saturday'
+    END AS day_of_week,
+
+    CASE 
+        WHEN CAST(STRFTIME('%m', DATETIME(&quot;Created Date&quot;)) AS INTEGER) IN (12, 1, 2) THEN 'Winter'
+        WHEN CAST(STRFTIME('%m', DATETIME(&quot;Created Date&quot;)) AS INTEGER) IN (3, 4, 5) THEN 'Spring'
+        WHEN CAST(STRFTIME('%m', DATETIME(&quot;Created Date&quot;)) AS INTEGER) IN (6, 7, 8) THEN 'Summer'
+        WHEN CAST(STRFTIME('%m', DATETIME(&quot;Created Date&quot;)) AS INTEGER) IN (9, 10, 11) THEN 'Fall'
+    END AS season,
+
+    -------------------------------------------------
+    -- COMPLAINT INFO
+    -------------------------------------------------
+    UPPER(&quot;Complaint Type&quot;) AS complaint_type,
+    UPPER(&quot;Descriptor&quot;) AS descriptor,
+    UPPER(&quot;Borough&quot;) AS borough,
+    &quot;City&quot; AS city,
+    &quot;Incident Zip&quot; AS incident_zip,
+
+    -------------------------------------------------
+    -- LOCATION DATA
+    -------------------------------------------------
+    &quot;Latitude&quot; AS latitude,
+    &quot;Longitude&quot; AS longitude,
+    &quot;Location&quot; AS location_raw,
+
+    -------------------------------------------------
+    -- RESPONSE TIME CALCULATION
+    -------------------------------------------------
+    CASE
+        WHEN &quot;Closed Date&quot; IS NULL THEN NULL
+        ELSE 
+            ROUND(
+                (JULIANDAY(DATETIME(&quot;Closed Date&quot;)) - JULIANDAY(DATETIME(&quot;Created Date&quot;))) * 24,
+                3
+            )
+    END AS response_hours
+
+FROM service_request;
+
+-- Veryfiying TABLE
+SELECT COUNT(*)
+FROM clean_hpd_requests;
+
+-- clean_hpd_requests table did not show up in the browse data tab. 
+-- Re- creating table.
+DROP TABLE IF EXISTS clean_hpd_requests;
+
+CREATE TABLE clean_hpd_requests AS
+SELECT
+    &quot;Unique Key&quot;,
+    &quot;Created Date&quot;,
+    &quot;Closed Date&quot;,
+    &quot;Agency&quot;,
+    &quot;Agency Name&quot;,
+    &quot;Complaint Type&quot;,
+    &quot;Descriptor&quot;,
+    &quot;Borough&quot;,
+    &quot;City&quot;,
+    &quot;Incident Zip&quot;,
+    &quot;Incident Address&quot;,
+    &quot;Street Name&quot;,
+    &quot;Status&quot;,
+    &quot;Location Type&quot;,
+    &quot;Latitude&quot;,
+    &quot;Longitude&quot;,
+    year,
+    month,
+    day,
+    day_of_week,
+    season,
+    created_dt,
+    closed_dt,
+    response_hours
+FROM service_request
+WHERE &quot;Agency&quot; = 'HPD'
+  AND &quot;Complaint Type&quot; IN (
+        'HEAT/HOT WATER',
+        'PLUMBING',
+        'ELECTRIC'
+      )
+  AND response_hours IS NOT NULL;
+
+
+</sql><current_tab id="1"/></tab_sql></sqlb_project>
