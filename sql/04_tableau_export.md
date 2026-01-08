@@ -1,9 +1,13 @@
--- =============================================================
--- 04_tableau_export.sql
--- NYC HPD 311 Complaints — Tableau Export Table
--- Purpose: Build a clean, filtered dataset for dashboards
--- =============================================================
+# 04_tableau_export.sql  
+### NYC HPD 311 Complaints — Tableau Export Table  
+**Purpose:** Create a clean, filtered, analysis-ready dataset for Tableau dashboards.
 
+---
+
+##  1. Drop Existing Table (If Exists)
+
+```sql
+DROP TABLE IF EXISTS clean_hpd_requests;
 DROP TABLE IF EXISTS clean_hpd_requests;
 
 CREATE TABLE clean_hpd_requests AS
@@ -32,3 +36,4 @@ WHERE "Agency" = 'HPD'
   AND response_hours IS NOT NULL;
 
 SELECT COUNT(*) FROM clean_hpd_requests;
+
